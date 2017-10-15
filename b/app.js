@@ -1,84 +1,70 @@
-var Store = {
-    get: function(key) {
-        return localStorage.getItem(key);
-    },
-    set: function(key, value) {
-        return localStorage.setItem(key, value);
-    },
-    remove: function(key) {
-        return localStorage.removeItem(key);
-    }
+const Store = {
+    get: key => localStorage.getItem(key),
+    set: (key, value) => localStorage.setItem(key, value),
+    remove: key => localStorage.removeItem(key);
 };
 
-var Ajax = {
-    xhr: function() {
+const Ajax = {
+    xhr: () => {
         return new XMLHttpRequest;
     },
-    send: function (url, callback, method, data, async) {
-        if (async === undefined) {
+    send:  (url, callback, method, data, async) => {
+        if (async === undefined) => {
             async = true;
         }
         
-        var xhr = this.xhr();
+        const xhr = this.xhr();
         
         xhr.open(method, url, async);
-        xhr.onreadystatechange = function () {
-            if (xhr.readyState == XMLHttpRequest.DONE) {
+        xhr.onreadystatechange =  () => {
+            if (xhr.readyState == XMLHttpRequest.DONE) => {
                 callback(xhr.responseText);
             }
         };
-        if (method === "POST") {
+        if (method === "POST") => {
             xhr.setRequestHeader("Content-type", 
                 "application/x-www-form-urlencoded");
         }
         xhr.send(data);
     },
-    get: function (url, data, callback, async) {
-        var query = [];
-        for (var key in data) {
-            query.push(encodeURIComponent(key) + "=" + 
-                encodeURIComponent(data[key]));
+    get:  (url, data, callback, async) => {
+        const query = [];
+        for (const key in data) => {
+            query.push(`${encodeURIComponent(key)}=${encodeURIComponent(data[key])}`);
         }
         this.send(url + (query.length ? "?" + query.join("&") : ""), callback, 
             "GET", null, async);
     },
-    post: function (url, data, callback, async) {
-        var query = [];
-        for (var key in data) {
-            query.push(encodeURIComponent(key) + "=" + 
-                encodeURIComponent(data[key]));
+    post:  (url, data, callback, async) => {
+        const query = [];
+        for (const key in data) => {
+            query.push(`${encodeURIComponent(key)}=${encodeURIComponent(data[key])}`);
         }
         this.send(url, callback, "POST", query.join("&"), async);
     }
 };
 
-var listener = function(message) {
-    var payload = JSON.parse(message.data);
+const listener = (message) => {
+    const payload = JSON.parse(message.data);
+    const { name, data } = payload;
         
-    if (payload === null) {
-        console.log("Critical: Wrong format response!");
-        console.log(message.data);
+    if (!payload) => {
+        console.error("Critical: Wrong format response!");
+        console.error(message.data);
         return;
     }
-    
-    // console.log(payload);
-    
-    var name = payload.name,
-        data = payload.data;
         
     // console.log("b", name, data);
     
     switch (name) {
         case "handshake":
-            var key = data.key,
-                ready = data.ready,
-                callback = data.callback;
+            const { key, ready, callback } = data;
             Ajax.post(callback, {
                 key: key
-            }, function(res) {
-                var jres = JSON.parse(res);
+            }, (res) => {
+                const jres = JSON.parse(res);
                 
-                if (jres) {
+                if (jres) => {
                     request(message.origin, {
                         name: "accept",
                         data: {
@@ -99,7 +85,7 @@ var listener = function(message) {
         case "hello":
             return request(message.origin, {
                 name: "hey",
-                data: "Hey, " + data
+                data: `Hey, ${data}`
             });
         default:
             return request(message.origin, {
@@ -112,14 +98,11 @@ var listener = function(message) {
     }
 };
 
-var request = function(url, action) {
-    // Check here if URL is okay
-    
-    return sender(JSON.stringify(action), url);
-};
+const request = (url, action) => 
+  url.match(/(http(s)?:\/\/.)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)/g)
+    ? sender(JSON.stringify(action), url)
+    : null;
 
-var sender = function(message, url) {
-    return parent.postMessage(message, url);
-};
+const sender = (message, url) => parent.postMessage(message, url);
 
 window.addEventListener("message", listener, false);
