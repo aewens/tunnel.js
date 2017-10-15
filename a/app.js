@@ -1,17 +1,11 @@
-var Store = {
-    get: function(key) {
-        return localStorage.getItem(key);
-    },
-    set: function(key, value) {
-        return localStorage.setItem(key, value);
-    },
-    remove: function(key) {
-        return localStorage.removeItem(key);
-    }
+const Store = {
+    get: key => localStorage.getItem(key);
+    set: (key, value) => localStorage.setItem(key, value);
+    remove: key => localStorage.removeItem(key);
 };
 
-var Tunnel = function() {
-    var listener = this.listener.bind(this),
+const Tunnel = () => {
+    const listener = this.listener.bind(this),
         remote = document.createElement("iframe");
     
     remote.style.display = "none";
@@ -27,28 +21,23 @@ var Tunnel = function() {
 Tunnel.readyEvent = new Event("tunnel-ready");
 
 Tunnel.prototype = {
-    noop: function() {},
-    S4: function() {
-        return (((1+Math.random())*0x10000)|0).toString(16).substring(1);
-    },
-    guid: function() {
-        return [
-            this.S4() + this.S4(),
-            this.S4(),
-            this.S4(),
-            this.S4(),
-            this.S4() + this.S4() + this.S4()
-        ].join("-");
-    }, 
-    start: function(options) {
-        var self = this;
-        
+    noop: () => {},
+    S4: () => (((1+Math.random())*0x10000)|0).toString(16).substring(1),
+    guid: () =>
+        [
+          this.S4() + this.S4(),
+          this.S4(),
+          this.S4(),
+          this.S4(),
+          this.S4() + this.S4() + this.S4()
+        ].join("-"),
+    start: (options) => {
         this.src = "*";
         this.wait = 1000;
         this.ready = this.noop;
         this.callback = "/callback";
         
-        if (options !== undefined) {
+        if (options) {
             this.src = options.src || this.src;
             this.wait = options.wait || this.wait;
             this.ready = options.ready || this.ready;
@@ -57,38 +46,33 @@ Tunnel.prototype = {
         
         this.remote.setAttribute("src", this.src);
             
-        document.addEventListener("tunnel-ready", function() {
-            return self.ready();
-        });
+        document.addEventListener("tunnel-ready", () => this.ready());
         
-        return this.loadID = setInterval(function() {
-            if (!Store.get("key")) Store.set("key", self.guid());
+        return this.loadID = setInterval(() => {
+            if (!Store.get("key")) Store.set("key", this.guid());
             
-            return self.request(self.src, {
+            return this.request(this.src, {
                 name: "handshake",
                 data: {
                     key: Store.get("key"),
-                    callback: self.callback
+                    callback: this.callback
                 }
             });
         }, this.wait);
     },
-    unload: function() {
+    unload: () => {
         clearInterval(this.loadID);
         this.loadID = null;
         Store.set("tunnel-ready", true);
         // return callback.call(this, args);
     },
-    request: function(url, action) {
-        // Check here if URL is okay
-        
-        return this.sender(JSON.stringify(action), url);
-    },
-    sender: function(message, url) {
-        return this.remote.contentWindow.postMessage(message, url);
-    },
-    send: function(name) {
-        var token = null;
+    request: (url, action) =>
+        url.match(/(http(s)?:\/\/.)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)/g)
+          ? this.sender(JSON.stringify(action), url)
+          : null,
+    sender: (message, url) => this.remote.contentWindow.postMessage(message, url),
+    send: (name) => {
+        const token = null;
         
         switch (name) {
             case "ready":
@@ -98,24 +82,21 @@ Tunnel.prototype = {
                     data: "Austin"
                 });
             default:
-                console.log("Fail: That's not a valid name");
+                console.error("Fail: That's not a valid name");
                 break;
         }
     },
-    listener: function(message) {
-        var payload = JSON.parse(message.data);
+    listener: (message) => {
+        const payload = JSON.parse(message.data);
+        const { name, data } = payload;
         
         // Remove in production
-        if (payload === null) {
-            console.log("Critical: Wrong format response!");
-            console.log(message.data);
-            console.log(JSON.parse(message.data));
+        if (!payload) {
+            console.error("Critical: Wrong format response!");
+            console.error(message.data);
+            console.error(JSON.parse(message.data));
             return;
         }
-        
-        var name = payload.name,
-            data = payload.data,
-            self = this;
             
         switch(name) {
             case "accept":
@@ -126,10 +107,10 @@ Tunnel.prototype = {
                 console.log(data);
                 break;
             case "fail":
-                console.log("Failed: "+data.code+": "+data .msg);
+                console.error(`Failed:${data.code}: ${data.msg}`);
                 break;
             default:
-                console.log("Error!");
+                console.error("Error!");
                 break;
         }
         
@@ -139,12 +120,12 @@ Tunnel.prototype = {
     }
 };
 
-var tunnel = new Tunnel();
+const tunnel = new Tunnel();
 tunnel.start({
     src: "http://localhost/testing/b",
     wait: 500,
     callback: "ajax.php",
-    ready: function() {
+    ready: () => {
         console.log("Ready!");
     }
 });
